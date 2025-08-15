@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>在线2FA验证器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <style>
+    body {
+      background: #f7f9fb;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .main-box {
+      max-width: 400px;
+      margin: 80px auto 0 auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      padding: 32px 28px 24px 28px;
+      text-align: center;
+    }
+    .main-box p {
+      color: #888;
+      font-size: 1.1em;
+      margin-bottom: 8px;
+      margin-top: 18px;
+      letter-spacing: 1px;
+    }
+    #webSec {
+      border: 1px solid #d0d7de;
+      border-radius: 8px;
+      width: 100%;
+      outline: none;
+      color: #333;
+      padding: 10px 12px;
+      font-size: 1.15em;
+      background: #f5f7fa;
+      margin-bottom: 10px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    #webSec:focus {
+      border-color: #2196F3;
+      background: #fff;
+    }
+    #webCode {
+      font-size: 2.8em;
+      font-weight: bold;
+      color: #2196F3;
+      letter-spacing: 6px;
+      background: #f0f4fa;
+      border-radius: 8px;
+      padding: 16px 0;
+      margin-bottom: 10px;
+      user-select: all;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    #webCode:active {
+      background: #e3eaf6;
+    }
+    #webRefresh {
+      color: #000000;
+      font-size: 1.2em;
+      font-weight: 500;
+      margin-top: 6px;
+      letter-spacing: 2px;
+    }
+    #webRefreshBox {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 6px;
+      margin-bottom: 8px;
+    }
+    #webRefreshCircle {
+      width: 54px;
+      height: 54px;
+      position: relative;
+      margin-right: 12px;
+    }
+    #webRefreshCircle svg {
+      position: absolute;
+      top: 0; left: 0;
+    }
+    #webRefreshNum {
+      position: absolute;
+      top: 0; left: 0;
+      width: 54px; height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3em;
+      font-weight: 500;
+      color: #000;
+      letter-spacing: 2px;
+      user-select: none;
+    }
+    #topAlert {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #e53935;
+      color: #fff;
+      font-size: 1.1em;
+      padding: 10px 0;
+      z-index: 9999;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    #topAlert .close-btn {
+      position: absolute;
+      right: 18px;
+      top: 8px;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 1.3em;
+      cursor: pointer;
+      padding: 0 8px;
+      line-height: 1;
+    }
+    @keyframes alertScroll {
+      0% { text-indent: 0; }
+      100% { text-indent: -100%; }
+    }
+    @media (max-width: 500px) {
+      .main-box {
+        margin-top: 24px;
+        padding: 18px 8px 16px 8px;
+      }
+      #webCode { font-size: 2em; }
+    }
+  </style>
+</head>
+<body>
+<div id="topAlert">
+  在线2FA验证器无记忆功能，请妥善保管你的密钥。
+  <button class="close-btn" title="关闭提醒" onclick="closeTopAlert()">×</button>
+</div>
+<div class="main-box">
+  <h1 id="mainTitle">在线2FA验证器</h1>
+  <input type="text" id="webSec" autocomplete="off" spellcheck="false" placeholder="输入2FA密钥">
+  <p>验证码</p>
+  <div id="webCode"></div>
+  <!-- 新增复制提示 -->
+  <div id="copyTip" style="display:none;position:absolute;left:0;right:0;margin:auto;width:120px;top:16px;background:#2196F3;color:#fff;border-radius:8px;padding:8px 0;font-size:1.1em;z-index:99;">已复制</div>
+  <p>倒计时</p>
+  <div id="webRefreshBox">
+    <div id="webRefreshCircle">
+      <svg width="54" height="54">
+        <circle cx="27" cy="27" r="24" stroke="#eee" stroke-width="6" fill="none"/>
+        <circle id="webRefreshArc" cx="27" cy="27" r="24" stroke="#2196F3" stroke-width="6" fill="none"
+          stroke-dasharray="150.72" stroke-dashoffset="0" style="transition:stroke-dashoffset 0.3s linear;"/>
+      </svg>
+      <div id="webRefreshNum">2</div>
+    </div>
+  </div>
+</div>
+<!-- 页脚开始 -->
+<div id="footer" style="text-align:center;color:#aaa;font-size:1em;margin-top:40px;margin-bottom:16px;"></div>
+<!-- 页脚结束 -->
+</body>
+</html>
+<script>
+  let t = null;
+  let k = '';
+  let lastCode = '';
+  let isprivate = false;
+  function key2code(K,t) {
+    function sha1(C){
+      function L(x,b){return x<<b|x>>>32-b;}
+      var l=C.length,D=C.concat([1<<31]),V=0x67452301,W=0x88888888,
+        Y=271733878,X=Y^W,Z=0xC3D2E1F0;W^=V;
+      do D.push(0);while(D.length+1&15);D.push(32*l);
+      while (D.length){
+        var E=D.splice(0,16),a=V,b=W,c=X,d=Y,e=Z,f,k,i=12;
+        function I(x){var t=L(a,5)+f+e+k+E[x];e=d;d=c;c=L(b,30);b=a;a=t;}
+        for(;++i<77;)E.push(L(E[i]^E[i-5]^E[i-11]^E[i-13],1));
+        k=0x5A827999;for(i=0;i<20;I(i++))f=b&c|~b&d;
+        k=0x6ED9EBA1;for(;i<40;I(i++))f=b^c^d;
+        k=0x8F1BBCDC;for(;i<60;I(i++))f=b&c|b&d|c&d;
+        k=0xCA62C1D6;for(;i<80;I(i++))f=b^c^d;
+        V+=a;W+=b;X+=c;Y+=d;Z+=e;
+      }
+      return[V,W,X,Y,Z];
+    }
+    var k=[],l=[],i=0,j=0,c=0;
+    for (;i<K.length;){
+      c=c*32+'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.
+      indexOf(K.charAt(i++).toUpperCase());
+      if((j+=5)>31)k.push(Math.floor(c/(1<<(j-=32)))),c&=31;
+    }
+    j&&k.push(c<<(32-j));
+    for(i=0;i<16;++i)l.push(0x6A6A6A6A^(k[i]=k[i]^0x5C5C5C5C));
+    var s=sha1(k.concat(sha1(l.concat([0,t])))),o=s[4]&0xF;
+    return (((s[o>>2]<<8*(o&3)|(o&3?s[(o>>2)+1]>>>8*(4-o&3):0))&-1>>>1)%1000000).toString().padStart(6, "0");
+  }
+
+  function update() {
+    var e = Math.floor(new Date().getTime()/1000);
+    var t = Math.floor(e/30);
+    let left = 30 - (e - (t*30));
+    let code = k ? key2code(k, t) : '';
+    const codeElem = document.querySelector('#webCode');
+    const arc = document.getElementById('webRefreshArc');
+    const num = document.getElementById('webRefreshNum');
+
+    if (!k) {
+      codeElem.innerHTML = "--- ---";
+      num.textContent = "-";
+      arc.setAttribute('stroke', '#bbb');
+      arc.setAttribute('stroke-dashoffset', '150.72');
+      lastCode = '';
+    } else {
+      if (lastCode != code) codeElem.innerHTML = code;
+      lastCode = code;
+      num.textContent = left;
+      arc.setAttribute('stroke', '#2196F3');
+      arc.setAttribute('stroke-dashoffset', (150.72 * (1 - left/30)).toFixed(2));
+    }
+  }
+
+  // 判断是否分享模式
+  function isShareMode() {
+    return location.search.indexOf('xg=f') !== -1;
+  }
+
+  // parse url param
+  function getCodeFromUrl() {
+    // 只取 ?code= 后的内容，遇到 & 截断
+    const match = location.search.match(/[\?&]code=([^&]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+  k = getCodeFromUrl();
+  document.querySelector('#webSec').value = k;
+  isprivate = location.search.indexOf('private=1') !== -1;
+
+  // 分享模式处理
+  if (isShareMode()) {
+    document.querySelector('#webSec').setAttribute('disabled', 'disabled');
+    document.querySelector('#webSec').style.background = '#eee';
+    document.querySelector('#webSec').style.color = '#aaa';
+  } else {
+    document.querySelector('#webSec').addEventListener('keyup', onSecretUpdate);
+    document.querySelector('#webSec').addEventListener('input', onSecretUpdate);
+    document.querySelector('#webSec').addEventListener('focus', e => e.target.setSelectionRange(0, e.target.value.length));
+  }
+
+  setInterval(update, 1000);
+  update();
+
+  function onSecretUpdate(e) {
+    k = e.target.value.trim();
+    k = k.replace(/\s+/g, '');
+    e.target.value = k;
+    if (!isprivate) window.history.pushState({state:1}, document.title,'?code='+k);
+    update();
+  }
+
+  // 获取bt参数
+  function getTitleFromUrl() {
+    const match = location.search.match(/[\?&]bt=([^&]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+  }
+
+  // 设置主标题和浏览器标题
+  const customTitle = getTitleFromUrl();
+  if (customTitle) {
+    document.getElementById('mainTitle').textContent = customTitle;
+    document.title = customTitle;
+  }
+
+  // 复制验证码功能
+  document.getElementById('webCode').onclick = function() {
+    const code = this.textContent.trim();
+    if (!code || code === "--- ---") return;
+    navigator.clipboard.writeText(code).then(() => {
+      const tip = document.getElementById('copyTip');
+      tip.style.display = 'block';
+      setTimeout(() => { tip.style.display = 'none'; }, 1000);
+    });
+  };
+
+  // 顶部提醒相关
+  function getCookie(name) {
+    const arr = document.cookie.split(';');
+    for (let i = 0; i < arr.length; i++) {
+      const kv = arr[i].trim().split('=');
+      if (kv[0] === name) return decodeURIComponent(kv[1]);
+    }
+    return '';
+  }
+  function setCookie(name, value, days) {
+    const d = new Date();
+    d.setTime(d.getTime() + days*24*60*60*1000);
+    document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/';
+  }
+
+  function hasParamsOrEmptyCode() {
+    // 没有参数 或 code参数为空
+    if (location.search.length <= 1) return true;
+    const match = location.search.match(/[\?&]code=([^&]*)/);
+    return match && (!match[1] || decodeURIComponent(match[1]) === '');
+  }
+
+  // 页脚显示逻辑
+  function showFooter() {
+    const footer = document.getElementById('footer');
+    const search = location.search;
+    if (search.indexOf('xy=t') !== -1) {
+      footer.innerHTML = '咸鱼@亿时界_ ';
+    } else {
+      footer.innerHTML = 'Github@yanjie233';
+    }
+  }
+  showFooter();
+
+  function closeTopAlert() {
+    document.getElementById('topAlert').style.display = 'none';
+    setCookie('no2faAlert', '1', 7);
+  }
+
+  window.addEventListener('DOMContentLoaded', function() {
+    if (hasParamsOrEmptyCode() && !getCookie('no2faAlert')) {
+      document.getElementById('topAlert').style.display = 'block';
+    }
+  });
+</script>

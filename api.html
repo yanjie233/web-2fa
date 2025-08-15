@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>2FA在线验证器 API文档</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f9fb; margin: 0; padding: 0; }
+    .container { max-width: 700px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #eee; padding: 32px; }
+    h1 { color: #2196F3; }
+    table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+    th, td { border: 1px solid #e0e0e0; padding: 10px; text-align: left; }
+    th { background: #f0f4fa; }
+    code { background: #f5f7fa; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>2FA在线验证器 API参数文档</h1>
+  <p>通过URL参数控制页面行为，支持以下参数：</p>
+  <table>
+    <tr>
+      <th>参数</th>
+      <th>示例</th>
+      <th>说明</th>
+    </tr>
+    <tr>
+      <td><code>code</code></td>
+      <td>?code=JBSWY3DPEHPK3PXP</td>
+      <td>2FA密钥，填写后自动显示对应验证码。</td>
+    </tr>
+    <tr>
+      <td><code>bt</code></td>
+      <td>?bt=自定义标题</td>
+      <td>页面主标题和浏览器标题，支持中文。</td>
+    </tr>
+    <tr>
+      <td><code>xg</code></td>
+      <td>?xg=f</td>
+      <td>分享模式，密钥输入框不可编辑，仅用于展示验证码。</td>
+    </tr>
+    <tr>
+      <td><code>private</code></td>
+      <td>?private=1</td>
+      <td>私密模式，修改密钥时不会自动更新URL参数。</td>
+    </tr>
+  </table>
+  <p style="margin-top:24px;">
+    <b>组合示例：</b><br>
+    <code>?code=JBSWY3DPEHPK3PXP&amp;bt=公司邮箱&amp;xg=f</code>
+  </p>
+</div>
+</body>
+</html>
